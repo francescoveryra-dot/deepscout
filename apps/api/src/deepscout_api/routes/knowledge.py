@@ -47,8 +47,21 @@ def _page_payload(page: WikiPageRow) -> dict:
 
 
 @router.get("/runs")
-def knowledge_runs(store=Depends(get_research_store)) -> list[dict]:
-    rows, _ = store.list_runs(status="completed", limit=40, offset=0)
+def knowledge_runs(
+    request: Request,
+    store=Depends(get_research_store),
+    settings: Settings = Depends(get_settings),
+) -> list[dict]:
+    access = load_access(request, store._session, settings)
+    public_only = settings.is_hosted() and access.principal is None
+    owner = access.principal_id if not access.is_local and not public_only else None
+    rows, _ = store.list_runs(
+        status="completed",
+        limit=40,
+        offset=0,
+        owner_principal_id=owner,
+        public_demo_only=public_only,
+    )
     out = []
     for row in rows:
         pages = list_pages_for_run(store._session, row.id)
@@ -71,10 +84,17 @@ def knowledge_pages(
 
 
 @router.get("/pages/{page_id}")
-def knowledge_page(page_id: UUID, store=Depends(get_research_store)) -> dict:
+def knowledge_page(
+    page_id: UUID,
+    request: Request,
+    store=Depends(get_research_store),
+    settings: Settings = Depends(get_settings),
+) -> dict:
     page = store._session.get(WikiPageRow, page_id)
     if page is None:
         raise HTTPException(status_code=404, detail="page not found")
+    access = load_access(request, store._session, settings)
+    authorize_run(store, page.research_run_id, access, write=False)
     statements = [
         row
         for row in list_statements_for_run(store._session, page.research_run_id)
@@ -117,10 +137,17 @@ def knowledge_page(page_id: UUID, store=Depends(get_research_store)) -> dict:
 
 
 @router.get("/statements/{statement_id}")
-def knowledge_statement(statement_id: UUID, store=Depends(get_research_store)) -> dict:
+def knowledge_statement(
+    statement_id: UUID,
+    request: Request,
+    store=Depends(get_research_store),
+    settings: Settings = Depends(get_settings),
+) -> dict:
     statement = store._session.get(WikiStatementRow, statement_id)
     if statement is None:
         raise HTTPException(status_code=404, detail="statement not found")
+    access = load_access(request, store._session, settings)
+    authorize_run(store, statement.research_run_id, access, write=False)
     claim = store._session.get(ClaimRow, statement.claim_id) if statement.claim_id else None
     evidence_rows = []
     if claim is not None:
@@ -171,9 +198,13 @@ def knowledge_statement(statement_id: UUID, store=Depends(get_research_store)) -
 @router.get("/search")
 def knowledge_search(
     run_id: UUID,
+    request: Request,
     q: str = Query(min_length=1, max_length=200),
     store=Depends(get_research_store),
+    settings: Settings = Depends(get_settings),
 ) -> dict:
+    access = load_access(request, store._session, settings)
+    authorize_run(store, run_id, access, write=False)
     if store.get_run(run_id) is None:
         raise HTTPException(status_code=404, detail="run not found")
     hits = query_compiled_statements(store._session, run_id=run_id, query=q, limit=20)[:20]
@@ -195,9 +226,13 @@ def knowledge_search(
 @router.get("/graph")
 def knowledge_graph(
     run_id: UUID,
+    request: Request,
     hops: int = Query(default=2, ge=1, le=3),
     store=Depends(get_research_store),
+    settings: Settings = Depends(get_settings),
 ) -> dict:
+    access = load_access(request, store._session, settings)
+    authorize_run(store, run_id, access, write=False)
     if store.get_run(run_id) is None:
         raise HTTPException(status_code=404, detail="run not found")
     statements = list_statements_for_run(store._session, run_id)[:80]

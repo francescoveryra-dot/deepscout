@@ -66,9 +66,53 @@ export default function AccountPage() {
         {message ? <p>{message}</p> : null}
       </section>
       <section className="card">
+        <h2>Privacy / Data</h2>
+        <button
+          type="button"
+          className="btn"
+          onClick={async () => {
+            const payload = await api.exportAccount();
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "deepscout-account-export.json";
+            link.click();
+            URL.revokeObjectURL(url);
+          }}
+        >
+          Export my data
+        </button>
+      </section>
+      <section className="card">
         <h2>Security</h2>
         <button type="button" className="btn" onClick={() => void logout()}>
           Log out
+        </button>
+        <button
+          type="button"
+          className="btn"
+          style={{ marginLeft: 8 }}
+          onClick={async () => {
+            await api.logoutAll();
+            clearLastRunId();
+            window.location.href = "/login";
+          }}
+        >
+          Log out all sessions
+        </button>
+        <button
+          type="button"
+          className="btn"
+          style={{ marginLeft: 8 }}
+          onClick={async () => {
+            if (!window.confirm("Delete this account and all owned research?")) return;
+            await api.deleteAccount();
+            clearLastRunId();
+            window.location.href = "/login";
+          }}
+        >
+          Delete account
         </button>
       </section>
     </div>

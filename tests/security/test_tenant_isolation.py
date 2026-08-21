@@ -23,6 +23,8 @@ def hosted_client(monkeypatch, postgres_ready):
     monkeypatch.setenv("CREDENTIAL_ENCRYPTION_KEY", "0" * 32)
     monkeypatch.setenv("GITHUB_OAUTH_CLIENT_ID", "test-github-id")
     monkeypatch.setenv("GITHUB_OAUTH_CLIENT_SECRET", "test-github-secret")
+    monkeypatch.setenv("RATE_LIMIT_MAX_REQUESTS", "1000")
+    monkeypatch.setenv("RATE_LIMIT_MUTATING_MAX", "1000")
     from deepscout_api.app import app
 
     return TestClient(app)
@@ -109,3 +111,64 @@ def test_open_redirect_rejected() -> None:
     assert safe_next_path("https://evil.test", "/") == "/"
     assert safe_next_path("//evil.test", "/") == "/"
     assert safe_next_path("/account", "/,/account") == "/account"
+
+
+def test_user_b_cannot_mutate_or_export_user_a(hosted_client) -> None:
+    session = _session()
+    store = ResearchStore(session)
+    settings = Settings(_env_file=None)
+    user_a, token_a = _user(session, "A")
+    user_b, token_b = _user(session, "B")
+    run = store.create_run(
+        ResearchRunCreate(goal="User A private research"),
+        settings,
+        owner_principal_id=user_a.id,
+    )
+    session.commit()
+    cookies_b = {"ds_session": token_b}
+    cookies_a = {"ds_session": token_a}
+    try:
+        paths = [
+            ("get", f"/api/v1/research-runs/{run.id}/export?format=markdown", None),
+            ("get", f"/api/v1/research-runs/{run.id}/evaluations", None),
+            ("get", f"/api/v1/research-runs/{run.id}/workspace", None),
+            ("get", f"/api/v1/research-runs/{run.id}/events", None),
+            ("get", f"/api/v1/knowledge/search?run_id={run.id}&q=test", None),
+            ("get", f"/api/v1/knowledge/graph?run_id={run.id}", None),
+            ("post", f"/api/v1/research-runs/{run.id}/cancel", None),
+            ("post", f"/api/v1/research-runs/{run.id}/resume", None),
+            ("post", f"/api/v1/research-runs/{run.id}/restart", None),
+            ("post", f"/api/v1/research-runs/{run.id}/fork", {"reason": "stolen"}),
+            ("post", f"/api/v1/research-runs/{run.id}/execute", None),
+        ]
+        for method, path, body in paths:
+            kwargs: dict = {"cookies": cookies_b}
+            if body is not None:
+                kwargs["json"] = body
+            response = getattr(hosted_client, method)(path, **kwargs)
+            assert response.status_code == 404, path
+        assert hosted_client.get(
+            f"/api/v1/research-runs/{run.id}/export?format=json", cookies=cookies_a
+        ).status_code == 200
+        export = hosted_client.get("/api/v1/account/export", cookies=cookies_a)
+        assert export.status_code == 200
+        assert "ciphertext" not in export.text
+        assert "secret" not in export.text.lower() or "SecretStr" not in export.text
+        settings_payload = hosted_client.get("/api/v1/settings").json()
+        assert settings_payload["langsmith"]["tracing"] is False
+        assert settings_payload["langsmith"]["connected"] is False
+    finally:
+        from deepscout_persistence.identity import delete_principal_data
+
+        delete_principal_data(session, user_a.id)
+        delete_principal_data(session, user_b.id)
+        session.commit()
+        session.close()
+
+
+def test_mismatched_origin_is_rejected(hosted_client) -> None:
+    denied = hosted_client.post(
+        "/api/v1/auth/logout",
+        headers={"Origin": "https://evil.example"},
+    )
+    assert denied.status_code == 403

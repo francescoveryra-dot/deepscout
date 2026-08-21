@@ -415,8 +415,11 @@ def execute_research_run(
 @router.post("/{run_id}/cancel", response_model=ResearchRunRead)
 def cancel_research_run(
     run_id: UUID,
+    request: Request,
     store=Depends(get_research_store),
+    settings: Settings = Depends(get_settings),
 ) -> ResearchRunRead:
+    _require_run(request, store, settings, run_id, write=True)
     run = store.get_run(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Research run not found")
@@ -429,10 +432,12 @@ def cancel_research_run(
 @router.post("/{run_id}/resume", response_model=ExecuteResponse, status_code=202)
 def resume_research_run(
     run_id: UUID,
+    request: Request,
     background_tasks: BackgroundTasks,
     store=Depends(get_research_store),
     settings: Settings = Depends(get_settings),
 ) -> ExecuteResponse:
+    _require_run(request, store, settings, run_id, write=True)
     run = store.get_run(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Research run not found")
@@ -452,10 +457,14 @@ def resume_research_run(
 @router.post("/{run_id}/restart", response_model=ExecuteResponse, status_code=202)
 def restart_research_run(
     run_id: UUID,
+    request: Request,
     background_tasks: BackgroundTasks,
     store=Depends(get_research_store),
     settings: Settings = Depends(get_settings),
 ) -> ExecuteResponse:
+    _require_run(request, store, settings, run_id, write=True)
+    access = load_access(request, store._session, settings)
+    owner_id = owner_for_create(access)
     run = store.get_run(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Research run not found")
@@ -468,6 +477,7 @@ def restart_research_run(
         ),
         settings,
         config_snapshot=_snapshot(settings),
+        owner_principal_id=owner_id,
     )
     jobs = JobService(store)
     job = jobs.enqueue_execute_run(created.id)
@@ -483,10 +493,14 @@ class ForkBody(BaseModel):
 def fork_research_run(
     run_id: UUID,
     body: ForkBody,
+    request: Request,
     background_tasks: BackgroundTasks,
     store=Depends(get_research_store),
     settings: Settings = Depends(get_settings),
 ) -> ExecuteResponse:
+    access = load_access(request, store._session, settings)
+    owner_id = owner_for_create(access)
+    row = authorize_run(store, run_id, access, write=False)
     run = store.get_run(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Research run not found")
@@ -503,8 +517,10 @@ def fork_research_run(
         fork_reason=body.reason[:128],
         root_run_id=run_id,
         lineage_kind="fork",
-        owner_principal_id=store.get_run_row(run_id).owner_principal_id if store.get_run_row(run_id) else None,
+        owner_principal_id=owner_id,
     )
+    if row.is_public_demo:
+        return ExecuteResponse(run_id=created.id, status="created", job_id=None)
     jobs = JobService(store)
     job = jobs.enqueue_execute_run(created.id)
     _kick_worker(background_tasks, settings)
@@ -610,8 +626,13 @@ def create_source_preference(
 
 @router.delete("/{run_id}/source-preferences/{preference_id}", status_code=204)
 def delete_source_preference(
-    run_id: UUID, preference_id: UUID, store=Depends(get_research_store)
+    run_id: UUID,
+    preference_id: UUID,
+    request: Request,
+    store=Depends(get_research_store),
+    settings: Settings = Depends(get_settings),
 ) -> None:
+    _require_run(request, store, settings, run_id, write=True)
     if not store.delete_source_preference(run_id, preference_id):
         raise HTTPException(status_code=404, detail="preference not found")
     store.commit()
@@ -642,8 +663,11 @@ def diff_research_runs(
 def get_snapshot(
     run_id: UUID,
     snapshot_id: UUID,
+    request: Request,
     store=Depends(get_research_store),
+    settings: Settings = Depends(get_settings),
 ) -> dict:
+    _require_run(request, store, settings, run_id, write=False)
     try:
         return snapshot_detail(store, run_id, snapshot_id)
     except LookupError as exc:
@@ -653,8 +677,11 @@ def get_snapshot(
 @router.get("/{run_id}/evaluations")
 def get_run_evaluations(
     run_id: UUID,
+    request: Request,
     store=Depends(get_research_store),
+    settings: Settings = Depends(get_settings),
 ) -> dict:
+    _require_run(request, store, settings, run_id, write=False)
     if store.get_run(run_id) is None:
         raise HTTPException(status_code=404, detail="Research run not found")
     workspace = assemble_workspace(store, run_id, include_evals=True)
@@ -679,10 +706,13 @@ def get_run_evaluations(
 @router.get("/{run_id}/export")
 def export_research_run(
     run_id: UUID,
+    request: Request,
     store=Depends(get_research_store),
+    settings: Settings = Depends(get_settings),
     format: str = Query(default="markdown", pattern="^(markdown|json|csv|pdf|sources-csv|evals-json|evals-csv|snapshot-text)$"),
     snapshot_id: UUID | None = None,
 ):
+    _require_run(request, store, settings, run_id, write=False)
     if store.get_run(run_id) is None:
         raise HTTPException(status_code=404, detail="Research run not found")
     workspace = assemble_workspace(store, run_id, include_evals=True)

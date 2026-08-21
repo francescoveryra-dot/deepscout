@@ -106,7 +106,7 @@ def smoke_agent(
     body: SmokeAgentRequest,
     settings: Settings = Depends(get_settings),
 ) -> SmokeAgentResponseBody:
-    if not settings.enable_smoke_agent:
+    if settings.is_hosted() or not settings.enable_smoke_agent:
         raise HTTPException(status_code=404, detail="Not found")
     try:
         result = run_smoke_agent(settings, user_message=body.message)

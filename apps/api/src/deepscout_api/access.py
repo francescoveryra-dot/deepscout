@@ -8,7 +8,7 @@ from uuid import UUID
 from deepscout_core.deployment import LOCAL_SYSTEM_PRINCIPAL_ID, DeploymentMode
 from deepscout_core.settings import Settings
 from deepscout_persistence.identity import get_local_system, resolve_session
-from deepscout_persistence.models import PrincipalRow, ResearchRunRow
+from deepscout_persistence.models import PrincipalRow, ResearchRunRow, ResearchTemplateRow
 from deepscout_persistence.store import ResearchStore
 from fastapi import HTTPException, Request
 from sqlalchemy.orm import Session
@@ -82,7 +82,9 @@ def authorize_run(
     if access.is_local:
         return row
     require_hosted_auth_config(access)
-    if row.is_public_demo and not write:
+    if row.is_public_demo:
+        if write:
+            raise HTTPException(status_code=403, detail="Public demo is read-only")
         return row
     if access.principal is not None and row.owner_principal_id == access.principal.id:
         return row
@@ -98,6 +100,18 @@ def authorize_monitor(store: ResearchStore, monitor_id: UUID, access: AccessCont
     require_user(access)
     if row.owner_principal_id != access.principal_id:
         raise HTTPException(status_code=404, detail="monitor not found")
+    return row
+
+
+def authorize_template(store: ResearchStore, template_id: UUID, access: AccessContext):
+    row = store._session.get(ResearchTemplateRow, template_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="template not found")
+    if access.is_local:
+        return row
+    require_user(access)
+    if row.owner_principal_id != access.principal_id:
+        raise HTTPException(status_code=404, detail="template not found")
     return row
 
 

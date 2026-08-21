@@ -56,18 +56,39 @@ def product_overview(
             "role": "Operator" if access.is_local else ("Authenticated" if access.principal else "Anonymous"),
             "mode": access.mode.value,
         },
-        "langsmith": _langsmith_status(settings),
+        "langsmith": (
+            {"connected": False, "project": None, "region": "off", "tracing": False}
+            if settings.is_hosted()
+            else _langsmith_status(settings)
+        ),
         "providers": _provider_status(settings),
     }
 
 
 @router.get("/settings")
-def product_settings(settings: Settings = Depends(get_settings)) -> dict:
+def product_settings(
+    request: Request,
+    store=Depends(get_research_store),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    access = load_access(request, store._session, settings)
     postgres = probe_postgres(settings.database_url)
+    hosted = settings.is_hosted()
+    identity = {
+        "label": access.principal.display_name if access.principal else ("Visitor" if hosted else "Local workspace"),
+        "role": "Operator" if access.is_local else ("Authenticated" if access.principal else "Anonymous"),
+        "plan": None,
+        "mode": access.mode.value,
+    }
+    langsmith = (
+        {"connected": False, "project": None, "region": "off", "tracing": False}
+        if hosted
+        else _langsmith_status(settings)
+    )
     return {
-        "identity": {"label": "Local workspace", "role": "Operator", "plan": None},
+        "identity": identity,
         "providers": _provider_status(settings),
-        "langsmith": _langsmith_status(settings),
+        "langsmith": langsmith,
         "research_defaults": {
             "max_iterations": settings.research_max_iterations,
             "max_sources": settings.research_max_sources,
@@ -94,8 +115,8 @@ def product_settings(settings: Settings = Depends(get_settings)) -> dict:
         "health": {
             "api": "ok",
             "postgres": postgres,
-            "vector_store": _vector_store_status(settings, postgres),
-            "langsmith": "connected" if settings.langsmith_api_key is not None else "not_configured",
+            "vector_store": "user_vault" if hosted else _vector_store_status(settings, postgres),
+            "langsmith": "off" if hosted else ("connected" if settings.langsmith_api_key is not None else "not_configured"),
         },
         "security": {
             "untrusted_content": "Research titles, quotes, and reports are rendered as text.",

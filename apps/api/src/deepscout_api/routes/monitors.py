@@ -13,7 +13,7 @@ from deepscout_research.monitors.service import create_monitor, monitor_status
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from deepscout_api.access import load_access, owner_for_create
+from deepscout_api.access import authorize_monitor, load_access, owner_for_create
 from deepscout_api.deps import get_research_store
 from deepscout_api.routes.research_runs import _kick_worker
 
@@ -67,8 +67,6 @@ def get_monitor_route(
     store=Depends(get_research_store),
     settings: Settings = Depends(get_settings),
 ) -> dict:
-    from deepscout_api.access import authorize_monitor
-
     access = load_access(request, store._session, settings)
     authorize_monitor(store, monitor_id, access)
     row = store.get_monitor(monitor_id)
@@ -84,7 +82,15 @@ def get_monitor_route(
 
 
 @router.patch("/{monitor_id}")
-def patch_monitor(monitor_id: UUID, body: MonitorPatch, store=Depends(get_research_store)) -> dict:
+def patch_monitor(
+    monitor_id: UUID,
+    body: MonitorPatch,
+    request: Request,
+    store=Depends(get_research_store),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    access = load_access(request, store._session, settings)
+    authorize_monitor(store, monitor_id, access)
     row = store.get_monitor(monitor_id)
     if row is None:
         raise HTTPException(status_code=404, detail="monitor not found")
@@ -108,7 +114,14 @@ def patch_monitor(monitor_id: UUID, body: MonitorPatch, store=Depends(get_resear
 
 
 @router.delete("/{monitor_id}", status_code=204)
-def delete_monitor(monitor_id: UUID, store=Depends(get_research_store)) -> None:
+def delete_monitor(
+    monitor_id: UUID,
+    request: Request,
+    store=Depends(get_research_store),
+    settings: Settings = Depends(get_settings),
+) -> None:
+    access = load_access(request, store._session, settings)
+    authorize_monitor(store, monitor_id, access)
     row = store.get_monitor(monitor_id)
     if row is None:
         raise HTTPException(status_code=404, detail="monitor not found")
@@ -119,10 +132,13 @@ def delete_monitor(monitor_id: UUID, store=Depends(get_research_store)) -> None:
 @router.post("/{monitor_id}/run-now", status_code=202)
 def run_monitor_now(
     monitor_id: UUID,
+    request: Request,
     background_tasks: BackgroundTasks,
     store=Depends(get_research_store),
     settings: Settings = Depends(get_settings),
 ) -> dict:
+    access = load_access(request, store._session, settings)
+    authorize_monitor(store, monitor_id, access)
     row = store.get_monitor(monitor_id)
     if row is None:
         raise HTTPException(status_code=404, detail="monitor not found")

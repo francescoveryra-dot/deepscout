@@ -45,6 +45,10 @@ Existing MODE A rows are backfilled to `LOCAL_SYSTEM_PRINCIPAL`.
 **RLS:** evaluated and deferred. SQLAlchemy pooling + LISTEN/NOTIFY make session `SET ROLE` fragile.
 Scoped repositories + exhaustive A/B tests are the enforcement layer.
 
+Every run-scoped route (including cancel, resume, restart, fork, export, evaluations,
+snapshots, SSE, HITL, knowledge page/statement/search/graph) calls `authorize_run`.
+Monitors and templates have matching owner checks. Public demo writes return 403.
+
 ### BYOK
 
 Hosted research uses only `provider_credentials` decrypted with AES-GCM (cryptography AEAD),

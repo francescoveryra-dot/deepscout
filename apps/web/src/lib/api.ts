@@ -43,6 +43,9 @@ export const api = {
       }),
     ),
   logout: () => parse(apiFetch(`${apiUrl}/api/v1/auth/logout`, { method: "POST" })),
+  logoutAll: () => parse(apiFetch(`${apiUrl}/api/v1/auth/logout-all`, { method: "POST" })),
+  exportAccount: () => parse<Record<string, unknown>>(apiFetch(`${apiUrl}/api/v1/account/export`)),
+  deleteAccount: () => parse(apiFetch(`${apiUrl}/api/v1/account/delete`, { method: "POST" })),
   settings: () => parse<Record<string, unknown>>(apiFetch(`${apiUrl}/api/v1/settings`, { cache: "no-store" })),
   listRuns: (params: Record<string, string | number | undefined> = {}) => {
     const query = new URLSearchParams();

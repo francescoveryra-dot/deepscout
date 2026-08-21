@@ -821,6 +821,7 @@ class ResearchStore:
         *,
         run_id: uuid.UUID | None = None,
         status: ReviewRequestStatus | None = None,
+        owner_principal_id: uuid.UUID | None = None,
         limit: int = 50,
     ) -> list[ReviewRequestRow]:
         stmt = select(ReviewRequestRow).order_by(ReviewRequestRow.created_at.desc()).limit(limit)
@@ -828,6 +829,10 @@ class ResearchStore:
             stmt = stmt.where(ReviewRequestRow.research_run_id == run_id)
         if status is not None:
             stmt = stmt.where(ReviewRequestRow.status == status)
+        if owner_principal_id is not None:
+            stmt = stmt.join(
+                ResearchRunRow, ReviewRequestRow.research_run_id == ResearchRunRow.id
+            ).where(ResearchRunRow.owner_principal_id == owner_principal_id)
         return list(self._session.scalars(stmt).all())
 
     def update_review_status(
@@ -1642,9 +1647,13 @@ class ResearchStore:
         self._session.flush()
         return _template_to_read(row)
 
-    def delete_template(self, template_id: uuid.UUID) -> bool:
+    def delete_template(
+        self, template_id: uuid.UUID, *, owner_principal_id: uuid.UUID | None = None
+    ) -> bool:
         row = self._session.get(ResearchTemplateRow, template_id)
         if row is None:
+            return False
+        if owner_principal_id is not None and row.owner_principal_id != owner_principal_id:
             return False
         self._session.delete(row)
         self._session.flush()

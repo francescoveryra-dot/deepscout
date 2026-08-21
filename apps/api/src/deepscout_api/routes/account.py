@@ -131,6 +131,41 @@ def remove_credential(
         record_event(store._session, principal.id, "credential_delete", provider)
 
 
+@router.get("/export")
+def export_account(
+    request: Request,
+    store=Depends(get_research_store),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    access = load_access(request, store._session, settings)
+    principal = require_user(access)
+    runs, _ = store.list_runs(owner_principal_id=principal.id, limit=100, offset=0)
+    templates = store.list_templates(owner_principal_id=principal.id)
+    monitors = store.list_monitors(owner_principal_id=principal.id)
+    rows = {row.provider: row for row in list_credentials(store._session, principal.id)}
+    return {
+        "principal": {
+            "id": str(principal.id),
+            "display_name": principal.display_name,
+            "email": principal.email if principal.email_verified else None,
+        },
+        "runs": [
+            {
+                "id": str(row.id),
+                "goal": row.goal,
+                "status": row.status.value,
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+            }
+            for row in runs
+        ],
+        "templates": [item.model_dump(mode="json") for item in templates],
+        "monitors": [
+            {"id": str(row.id), "name": row.name, "enabled": row.enabled} for row in monitors
+        ],
+        "credentials": [_meta(rows.get(item.value), item.value) for item in CredentialProvider],
+    }
+
+
 @router.post("/delete")
 def delete_account(
     request: Request,

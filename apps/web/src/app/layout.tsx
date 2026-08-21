@@ -5,6 +5,8 @@ import { AppShell } from "@/components/AppShell";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
 
+export const dynamic = "force-dynamic";
+
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {

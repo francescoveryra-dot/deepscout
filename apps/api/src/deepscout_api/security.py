@@ -74,13 +74,20 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return True
 
     async def dispatch(self, request: Request, call_next) -> Response:
-        if not self._settings.rate_limit_enabled:
+        from deepscout_core.settings import get_settings
+
+        live = get_settings()
+        if self._settings.rate_limit_enabled:
+            settings = self._settings
+        elif live.rate_limit_enabled or live.is_hosted():
+            settings = live
+        else:
             return await call_next(request)
         client = request.client.host if request.client else "unknown"
         general_ok = self._allow(
             f"all:{client}",
-            self._settings.rate_limit_max_requests,
-            self._settings.rate_limit_window_s,
+            settings.rate_limit_max_requests,
+            settings.rate_limit_window_s,
         )
         if not general_ok:
             return JSONResponse({"detail": "Rate limit exceeded"}, status_code=429)
@@ -89,10 +96,31 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         )
         if mutating and not self._allow(
             f"mutate:{client}",
-            self._settings.rate_limit_mutating_max,
-            self._settings.rate_limit_window_s,
+            settings.rate_limit_mutating_max,
+            settings.rate_limit_window_s,
         ):
             return JSONResponse({"detail": "Rate limit exceeded"}, status_code=429)
+        return await call_next(request)
+
+
+class OriginCheckMiddleware(BaseHTTPMiddleware):
+    """Reject cross-site mutating requests whose Origin is not in CORS_ORIGINS.
+
+    Missing Origin is allowed (non-browser clients and TestClient). A present
+    mismatched Origin is CSRF, not CORS.
+    """
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        if request.method not in MUTATING_METHODS:
+            return await call_next(request)
+        origin = request.headers.get("origin")
+        if not origin:
+            return await call_next(request)
+        from deepscout_core.settings import get_settings
+
+        allowed = {item.rstrip("/") for item in cors_origins(get_settings())}
+        if origin.rstrip("/") not in allowed:
+            return JSONResponse({"detail": "Invalid origin"}, status_code=403)
         return await call_next(request)
 
 
@@ -123,6 +151,7 @@ def install_security_middleware(app: FastAPI, settings: Settings) -> None:
     if "*" in origins:
         raise RuntimeError("Wildcard CORS origins are not allowed")
     app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(OriginCheckMiddleware)
     app.add_middleware(RateLimitMiddleware, settings=settings)
     app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.max_request_bytes)
     app.add_middleware(

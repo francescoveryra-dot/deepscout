@@ -6,10 +6,16 @@ const isDev = process.env.NODE_ENV !== "production";
 const scriptSrc = isDev
   ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
   : "script-src 'self' 'unsafe-inline'";
+const apiOrigin = process.env.NEXT_PUBLIC_API_URL
+  ? new URL(process.env.NEXT_PUBLIC_API_URL).origin
+  : "";
 const connectSrc = [
   "connect-src 'self'",
   "http://127.0.0.1:8000",
   "http://localhost:8000",
+  ...(apiOrigin && apiOrigin !== "http://localhost:8000" && apiOrigin !== "http://127.0.0.1:8000"
+    ? [apiOrigin]
+    : []),
   ...(isDev ? ["ws:", "wss:"] : []),
 ].join(" ");
 
