@@ -9,7 +9,6 @@ import argparse
 import json
 import os
 import re
-from uuid import UUID
 
 from deepscout_core.domain.budget import ResearchBudget
 from deepscout_core.domain.schemas import ResearchRunCreate
@@ -24,7 +23,10 @@ from deepscout_research.search.tavily import TavilyWebSearchProvider
 DEMOS = (
     {
         "slug": "event-driven-research-runtime",
-        "goal": "Compare event-driven workers versus request/response APIs for long-running research jobs.",
+        "goal": (
+            "Compare event-driven workers versus request/response APIs "
+            "for long-running research jobs."
+        ),
     },
     {
         "slug": "mrna-vaccine-durability",
