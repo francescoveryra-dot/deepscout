@@ -14,6 +14,10 @@ from starlette.responses import JSONResponse, Response
 
 MUTATING_PREFIXES = (
     "/api/v1/research-runs",
+    "/api/v1/research-monitors",
+    "/api/v1/research-templates",
+    "/api/v1/account",
+    "/api/v1/auth/logout",
     "/api/v1/smoke/",
 )
 MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
@@ -124,7 +128,7 @@ def install_security_middleware(app: FastAPI, settings: Settings) -> None:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
-        allow_credentials=False,
-        allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["Content-Type"],
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Last-Event-ID"],
     )

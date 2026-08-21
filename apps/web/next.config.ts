@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import fs from "node:fs";
 import path from "node:path";
 
 const isDev = process.env.NODE_ENV !== "production";
@@ -36,9 +37,12 @@ const securityHeaders = [
   },
 ];
 
+const repoRoot = path.join(__dirname, "../..");
+const inMonorepo = fs.existsSync(path.join(repoRoot, "pyproject.toml"));
+
 const nextConfig: NextConfig = {
   output: "standalone",
-  outputFileTracingRoot: path.join(__dirname, "../.."),
+  ...(inMonorepo ? { outputFileTracingRoot: repoRoot } : {}),
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
   compress: true,

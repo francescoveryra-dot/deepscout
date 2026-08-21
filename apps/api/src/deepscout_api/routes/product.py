@@ -5,8 +5,9 @@ from __future__ import annotations
 from deepscout_core.settings import Settings, get_settings
 from deepscout_core.types import ProviderKind
 from deepscout_providers.defaults import DEFAULT_EMBEDDING_MODELS
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
+from deepscout_api.access import load_access
 from deepscout_api.deps import get_research_store
 from deepscout_api.probes import probe_postgres
 from deepscout_api.routes.research_runs import _list_item
@@ -16,10 +17,19 @@ router = APIRouter(prefix="/api/v1", tags=["product"])
 
 @router.get("/overview")
 def product_overview(
+    request: Request,
     store=Depends(get_research_store),
     settings: Settings = Depends(get_settings),
 ) -> dict:
-    rows, total = store.list_runs(limit=100, offset=0)
+    access = load_access(request, store._session, settings)
+    public_only = settings.is_hosted() and access.principal is None
+    owner = access.principal_id if not access.is_local and not public_only else None
+    rows, total = store.list_runs(
+        limit=100,
+        offset=0,
+        owner_principal_id=owner,
+        public_demo_only=public_only,
+    )
     metrics = store.list_run_card_metrics([row.id for row in rows])
     cards = [_list_item(row, metrics[row.id]) for row in rows]
     items = cards[:8]
@@ -41,7 +51,11 @@ def product_overview(
             "cost_status": "estimated" if known_costs else "unknown",
             "avg_completion_seconds": round(sum(durations) / len(durations), 1) if durations else None,
         },
-        "identity": {"label": "Local workspace", "role": "Operator"},
+        "identity": {
+            "label": access.principal.display_name if access.principal else "Visitor",
+            "role": "Operator" if access.is_local else ("Authenticated" if access.principal else "Anonymous"),
+            "mode": access.mode.value,
+        },
         "langsmith": _langsmith_status(settings),
         "providers": _provider_status(settings),
     }
@@ -91,6 +105,13 @@ def product_settings(settings: Settings = Depends(get_settings)) -> dict:
 
 
 def _provider_status(settings: Settings) -> dict:
+    if settings.is_hosted():
+        return {
+            "google": {"configured": False, "model": "gemini-3.7-flash", "source": "user_vault"},
+            "openai": {"configured": False, "model": "gpt-4.1-mini", "source": "user_vault"},
+            "anthropic": {"configured": False, "model": "claude-haiku-4-5-20251001", "source": "user_vault"},
+            "tavily": {"configured": False, "source": "user_vault"},
+        }
     return {
         "google": {"configured": settings.google_api_key is not None, "model": "gemini-3.7-flash"},
         "openai": {"configured": settings.openai_api_key is not None, "model": "gpt-4.1-mini"},

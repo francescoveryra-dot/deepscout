@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from deepscout_core.settings import Settings, get_settings
 from deepscout_persistence.knowledge import (
     bounded_relation_hops,
     list_pages_for_run,
@@ -20,9 +21,10 @@ from deepscout_persistence.models import (
     WikiRevisionRow,
     WikiStatementRow,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 
+from deepscout_api.access import authorize_run, load_access
 from deepscout_api.deps import get_research_store
 
 router = APIRouter(prefix="/api/v1/knowledge", tags=["knowledge"])
@@ -57,9 +59,14 @@ def knowledge_runs(store=Depends(get_research_store)) -> list[dict]:
 
 
 @router.get("/pages")
-def knowledge_pages(run_id: UUID, store=Depends(get_research_store)) -> list[dict]:
-    if store.get_run(run_id) is None:
-        raise HTTPException(status_code=404, detail="run not found")
+def knowledge_pages(
+    run_id: UUID,
+    request: Request,
+    store=Depends(get_research_store),
+    settings: Settings = Depends(get_settings),
+) -> list[dict]:
+    access = load_access(request, store._session, settings)
+    authorize_run(store, run_id, access, write=False)
     return [_page_payload(page) for page in list_pages_for_run(store._session, run_id)]
 
 

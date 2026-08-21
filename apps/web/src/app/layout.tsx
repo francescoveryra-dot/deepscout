@@ -8,7 +8,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: "DeepScout",
+  title: "Deep Scout",
   description: "Evidence-backed autonomous research with provenance you can inspect.",
 };
 
