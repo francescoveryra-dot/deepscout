@@ -1,7 +1,7 @@
 from uuid import uuid4
 
-from deepscout_core.domain.schemas import ResearchRunCreate, ResearchTemplateCreate
 import pytest
+from deepscout_core.domain.schemas import ResearchRunCreate, ResearchTemplateCreate
 
 
 @pytest.mark.postgres

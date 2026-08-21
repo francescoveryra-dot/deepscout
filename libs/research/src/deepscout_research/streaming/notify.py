@@ -28,7 +28,11 @@ class NotifyWaiter:
             import psycopg
 
             if self._conn is None:
-                self._conn = psycopg.connect(listen_dsn(self._database_url), autocommit=True, connect_timeout=2)
+                self._conn = psycopg.connect(
+                    listen_dsn(self._database_url),
+                    autocommit=True,
+                    connect_timeout=2,
+                )
                 self._conn.execute(f"LISTEN {CHANNEL}")
             for notify in self._conn.notifies(timeout=remaining, stop_after=1):
                 if str(notify.payload) == str(run_id):

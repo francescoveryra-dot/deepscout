@@ -44,7 +44,11 @@ def test_chain_adds_missing_dependencies() -> None:
         decomposition=PlanDecomposition.CHAIN,
         tasks=[
             PlannerTask(task_key="find", objective="Identify the controlling statute", priority=1),
-            PlannerTask(task_key="read", objective="Extract obligations from that statute", priority=2),
+            PlannerTask(
+                task_key="read",
+                objective="Extract obligations from that statute",
+                priority=2,
+            ),
         ],
     )
     repaired = repair_plan(output)
@@ -62,7 +66,11 @@ def test_mixed_fan_in() -> None:
         tasks=[
             PlannerTask(task_key="a", objective="Profile chemistry A", priority=1),
             PlannerTask(task_key="b", objective="Profile chemistry B", priority=2),
-            PlannerTask(task_key="syn", objective="Compare A and B from prior findings", priority=3),
+            PlannerTask(
+                task_key="syn",
+                objective="Compare A and B from prior findings",
+                priority=3,
+            ),
         ],
     )
     repaired = repair_plan(output)

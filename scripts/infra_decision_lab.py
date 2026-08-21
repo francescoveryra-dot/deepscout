@@ -24,13 +24,13 @@ def _ms(started: float) -> float:
     return round((time.perf_counter() - started) * 1000, 3)
 
 
-def bench_events(engine) -> dict:
+def bench_events(engine, database_url: str) -> dict:
     poll_sleep = 0.4
     with engine.connect() as conn:
         started = time.perf_counter()
         conn.execute(text("SELECT 1"))
         poll_query_ms = _ms(started)
-    waiter = NotifyWaiter(settings.database_url)
+    waiter = NotifyWaiter(database_url)
     run_id = uuid.uuid4()
     started = time.perf_counter()
     # Notify from a second connection while waiting.
@@ -193,7 +193,7 @@ def main() -> int:
         "measured_at": datetime.now(UTC).isoformat(),
         "label": "LAB_NETWORK_SIMULATION",
         "listen_dsn": listen_dsn(settings.database_url).split("@")[-1],
-        "events": bench_events(engine),
+        "events": bench_events(engine, settings.database_url),
         "pgvector": bench_pgvector(engine),
         "graph": bench_graph(engine),
         "redis_decision": "REJECTED_BY_MEASUREMENT",
