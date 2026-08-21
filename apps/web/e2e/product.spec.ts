@@ -165,7 +165,9 @@ test.describe("product completion flows", () => {
   test("create monitor", async ({ page }) => {
     await mockProduct(page);
     await page.goto("/monitors");
-    await page.getByPlaceholder(/Research goal|Obiettivo/).fill("Track battery regs");
+    const goalField = page.locator("textarea").first();
+    await goalField.fill("Track battery regs");
+    await expect(page.getByTestId("monitor-create")).toBeEnabled();
     await page.getByTestId("monitor-create").click();
     await expect(page.getByTestId("monitor-create")).toBeVisible();
   });
