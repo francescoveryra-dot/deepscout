@@ -1,4 +1,9 @@
-from deepscout_evaluation.retrieval_metrics import duplicate_candidate_rate, mrr, precision_at_k, recall_at_k
+from deepscout_evaluation.retrieval_metrics import (
+    duplicate_candidate_rate,
+    mrr,
+    precision_at_k,
+    recall_at_k,
+)
 
 
 def test_recall_at_k() -> None:

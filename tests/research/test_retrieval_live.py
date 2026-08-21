@@ -22,7 +22,8 @@ def test_live_google_embedding_gemini_embedding_2() -> None:
     vectors = client.embed_documents([DOCUMENT_INSTRUCTION + "Live integration smoke text."])
     assert vectors
     vec = [float(v) for v in vectors[0]]
-    model = getattr(client, "model", None) or DEFAULT_EMBEDDING_MODELS[settings.resolved_embedding_provider()]
+    provider = settings.resolved_embedding_provider()
+    model = getattr(client, "model", None) or DEFAULT_EMBEDDING_MODELS[provider]
     assert str(model).startswith("gemini-embedding")
     assert len(vec) == settings.embedding_dimensions
     assert all(math.isfinite(v) for v in vec)

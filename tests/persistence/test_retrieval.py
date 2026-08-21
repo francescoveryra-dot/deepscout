@@ -2,17 +2,24 @@
 
 from __future__ import annotations
 
-import uuid
-
 import pytest
 from deepscout_core.domain.schemas import ResearchRunCreate, SourceSnapshotWrite, SourceWrite
 from deepscout_core.settings import Settings
 from deepscout_core.types import ProviderKind
-from deepscout_persistence.retrieval import dense_search, lexical_search, persist_embeddings, replace_chunks
+from deepscout_persistence.retrieval import (
+    dense_search,
+    lexical_search,
+    persist_embeddings,
+    replace_chunks,
+)
 from deepscout_research.retrieval.chunking import chunk_snapshot_text
 from deepscout_research.retrieval.models import RetrievalQuery
 from deepscout_research.retrieval.service import RetrievalService
-from deepscout_research.retrieval.spec import CHUNKING_VERSION, EMBEDDING_CONFIG_VERSION, EmbeddingSpec
+from deepscout_research.retrieval.spec import (
+    CHUNKING_VERSION,
+    EMBEDDING_CONFIG_VERSION,
+    EmbeddingSpec,
+)
 
 
 @pytest.fixture
