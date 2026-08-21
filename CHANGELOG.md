@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Default planner prompt is v2; v1 remains retrievable and deprecated
+- Default planner prompt is v2; v1 remains retrievable and ACTIVE for rollback
 - Workspace SSE reloads skip React state updates when `event_head` is unchanged
 - Snapshot listing uses one join query instead of per-source selects
 
