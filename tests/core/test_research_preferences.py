@@ -1,8 +1,8 @@
 """Tests for research preference resolution and normalization."""
 
 from deepscout_core.domain.research_preferences import (
-    ResearchPreferences,
     GeographicFocus,
+    ResearchPreferences,
     SourceFreshness,
     enrich_search_query,
     infer_geographic_regions,
@@ -38,9 +38,7 @@ def test_explicit_geo_regions() -> None:
 
 
 def test_enrich_search_query_adds_region() -> None:
-    prefs = ResearchPreferences(
-        geographic_focus=GeographicFocus(mode="regions", regions=["Italy"])
-    )
+    prefs = ResearchPreferences(geographic_focus=GeographicFocus(mode="regions", regions=["Italy"]))
     resolved = resolve_preferences(prefs, goal="billing rules")
     enriched = enrich_search_query("electronic invoicing requirements", resolved)
     assert "Italy" in enriched

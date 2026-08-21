@@ -63,7 +63,8 @@ export function NewResearchScreen() {
     api.listTemplates().then(setTemplates).catch(() => setTemplates([]));
     Promise.all([api.settings(), api.me().catch(() => ({ mode: "local" }))])
       .then(([settings, me]) => {
-        const isHosted = me.mode === "hosted" || settings.identity?.mode === "hosted";
+        const identity = settings.identity as { mode?: string } | undefined;
+        const isHosted = me.mode === "hosted" || identity?.mode === "hosted";
         setHosted(isHosted);
         if (!isHosted) {
           setProviderReady(true);

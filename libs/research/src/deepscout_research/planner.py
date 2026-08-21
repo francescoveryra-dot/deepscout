@@ -138,7 +138,9 @@ def _structured_to_planner_output(parsed: PlannerStructuredOutput) -> PlannerOut
         decomposition = PlanDecomposition.UNSPECIFIED
     tasks: list[PlannerTask] = []
     for index, task in enumerate(parsed.tasks, start=1):
-        key = "".join(ch for ch in task.task_key.lower() if ch.isalnum() or ch in "_-") or f"t{index}"
+        key = (
+            "".join(ch for ch in task.task_key.lower() if ch.isalnum() or ch in "_-") or f"t{index}"
+        )
         tasks.append(
             PlannerTask(
                 task_key=key[:64],

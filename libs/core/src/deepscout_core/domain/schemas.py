@@ -7,7 +7,6 @@ from uuid import UUID
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from deepscout_core.domain.budget import ResearchBudget
-from deepscout_core.domain.research_preferences import ResearchPreferences
 from deepscout_core.domain.enums import (
     ContradictionEvidenceStatus,
     PlanDecomposition,
@@ -17,6 +16,7 @@ from deepscout_core.domain.enums import (
     SourceType,
     ToolExecutionStatus,
 )
+from deepscout_core.domain.research_preferences import ResearchPreferences
 from deepscout_core.domain.usage import RunUsageSummary
 
 WORKER_TOOL_ALLOWLIST = frozenset({"web_search"})

@@ -773,10 +773,7 @@ class ResearchOrchestrator:
         if claims:
             critic_result = run_critic_for_run(self._store, run_id)
             correction_round = 0
-            while (
-                not critic_result.passed
-                and correction_round < self._max_correction_rounds
-            ):
+            while not critic_result.passed and correction_round < self._max_correction_rounds:
                 correction_round += 1
                 self._ensure_active(run_id)
                 verify_claims_for_run(self._store, run_id)
