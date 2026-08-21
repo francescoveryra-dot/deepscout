@@ -16,6 +16,7 @@ class RetrievalQuery(BaseModel):
     top_k: int = Field(default=8, ge=1, le=32)
     candidate_k: int = Field(default=20, ge=1, le=64)
     mode: Literal["dense", "lexical", "hybrid"] = "hybrid"
+    apply_rerank: bool = True
     source_ids: list[UUID] = Field(default_factory=list, max_length=50)
     fresher_than: datetime | None = None
 

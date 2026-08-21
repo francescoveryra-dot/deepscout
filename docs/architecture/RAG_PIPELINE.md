@@ -11,7 +11,7 @@ Evidence → quote resolved in SourceSnapshot.text (never embedding row)
 
 1. Fetch creates `SourceSnapshot`
 2. `index_snapshots_for_run` chunks text (`v1-recursive-1800-280`)
-3. Batch embeddings (Google `gemini-embedding-2` or OpenAI `text-embedding-3-small`, 1536 dims)
+3. Batch embeddings (Google `gemini-embedding-2` default **768** dims; OpenAI `text-embedding-3-small` may use 1536)
 4. Persist vectors in `chunk_embeddings` with provider/model/dimensions/config_version
 5. Snapshot `indexing_status` → `indexed` | `failed` | `skipped`
 

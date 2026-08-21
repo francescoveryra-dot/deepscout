@@ -30,7 +30,7 @@ Official docs consulted at implementation time:
 **Production default: C + deterministic post-fusion rerank (not a second LLM).**
 
 1. **Chunks are derived** from `SourceSnapshot` only. Tavily snippets never become chunks.
-2. **Dense retriever:** pgvector cosine, **exact scan** (no HNSW/IVFFlat). Local corpora are small; HNSW on tens of vectors adds operational cost without recall benefit. Upgrade path: add `USING hnsw (embedding vector_cosine_ops)` later when measured latency requires it. Default stored dimension **1536** (Gemini recommended mid size; OpenAI 3-small native). Spaces never mix: queries filter `provider + model + dimensions + config_version`.
+2. **Dense retriever:** pgvector cosine, **exact scan** (no HNSW/IVFFlat). Local corpora are small; HNSW on tens of vectors adds operational cost without recall benefit. Upgrade path: add `USING hnsw (embedding vector_cosine_ops)` later when measured latency requires it. Default stored dimension **768** for Google `gemini-embedding-2` after a symmetric 768-vs-1536 benchmark showed identical Hit@K / Recall@K / MRR / NDCG / phrase-recall on `retrieval-benchmark-v1.1` with half the vector storage. OpenAI `text-embedding-3-small` may still use 1536. Spaces never mix: queries filter `provider + model + dimensions + config_version`.
 3. **Lexical retriever:** `to_tsvector('simple', text)` + `plainto_tsquery('simple', query)` so CVE IDs, versions, and acronyms are not stemmed away.
 4. **Fusion:** Reciprocal Rank Fusion with `k=60`. Ranks are comparable; raw cosine and ts_rank are not.
 5. **Rerank:** deterministic only — source diversity (max 3 chunks per source), recency (`retrieved_at`), exact-token boost. No cross-encoder or LLM reranker until a retrieval dataset shows material NDCG gain.
@@ -107,19 +107,23 @@ Graphify targets code AST graphs and dev-agent navigation — not general resear
 
 **Decision: Partial adoption via existing grader + bounded re-retrieval + verify/critic.** No parallel Self-RAG framework.
 
-## Measured results (live gate 2026-08-21)
+## Measured results (closure gate 2026-08-21)
 
 | Check | Result |
 |---|---|
 | Google embedding runtime model | `gemini-embedding-2` |
-| Returned dimensions | 1536 |
-| Indexing (3 docs) | PASS, idempotent second pass |
+| Default dimensions | **768** (1536 equivalent on shared metrics; 2× storage) |
+| Indexing (4 docs) | PASS, both dimension spaces |
 | Cross-run isolation | PASS (0 hits) |
-| Ablation phrase-recall | lexical 0.5, dense 0.833, hybrid 0.833 |
-| 768 vs 1536 embed latency | 0.391s vs 0.455s |
-| Dimension decision | **1536 retained** (OpenAI parity, MODE A scale) |
+| Ablation Hit@K | FTS 0.583, dense 0.917, hybrid RRF 0.917, hybrid+rerank 0.917 |
+| Category robustness | LEXICAL_IDENTIFIER all modes strong; SEMANTIC favors dense/hybrid over FTS |
+| Reranker quality delta | 0.0 on this corpus (retained as policy: diversity / exact-token / retrieved_at) |
+| Isolated pre-RAG vs RAG | SIMILAR (2 claims / 2 evidence each; separate runs) |
+| Dimension decision | **768 default** — material quality equivalence; lower storage |
 
-LangSmith: dataset `deepscout-retrieval-v1`, experiment `deepscout-retrieval-20260821-*` (EU workspace).
+LangSmith: dataset `deepscout-retrieval-v1`, experiments `deepscout-retrieval-YYYYMMDD-dim768|dim1536|ablation-*` (EU workspace).
+
+Do **not** claim hybrid universally beats dense. Hybrid is the default for **category robustness** (lexical identifiers + semantic paraphrase) with RRF rank fusion.
 
 ## Authority model
 

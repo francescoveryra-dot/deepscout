@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from deepscout_core.types import ProviderKind
 
 CHUNKING_VERSION = "v1-recursive-1800-280"
-EMBEDDING_CONFIG_VERSION = "v1-dim1536-instruction-prefix"
-DEFAULT_EMBEDDING_DIMENSIONS = 1536
+EMBEDDING_CONFIG_VERSION = "v1-dim768-instruction-prefix"
+DEFAULT_EMBEDDING_DIMENSIONS = 768
 DEFAULT_RETRIEVAL_TOP_K = 8
 DEFAULT_CANDIDATE_K = 20
 MAX_CHUNKS_PER_SNAPSHOT = 80

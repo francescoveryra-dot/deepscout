@@ -138,4 +138,6 @@ class RetrievalService:
                     retrieval_reason="injection-flagged" if looks_like_injection(text) else "",
                 )
             )
+        if not request.apply_rerank:
+            return candidates[: request.top_k]
         return rerank_candidates(candidates, query=request.query, limit=request.top_k)
