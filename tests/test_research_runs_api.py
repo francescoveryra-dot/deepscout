@@ -142,6 +142,34 @@ def test_create_run_persists_mode_and_language(api_client: TestClient) -> None:
 
 
 @pytest.mark.postgres
+def test_create_run_persists_preferences_in_snapshot(api_client: TestClient) -> None:
+    from deepscout_core.domain.research_preferences import GeographicFocus, ResearchPreferences, SourceFreshness
+
+    created = api_client.post(
+        "/api/v1/research-runs",
+        json={
+            "goal": "Compare EV battery chemistries in Germany",
+            "research_mode": "standard",
+            "output_language": "en",
+            "preferences": {
+                "geographic_focus": {"mode": "regions", "regions": ["Germany"]},
+                "freshness": {"mode": "explicit", "policy": "7d"},
+                "model_policy": {"mode": "automatic"},
+                "excluded_domains": ["spam.test"],
+            },
+        },
+    )
+    assert created.status_code == 201
+    run_id = created.json()["id"]
+    workspace = api_client.get(f"/api/v1/research-runs/{run_id}/workspace")
+    assert workspace.status_code == 200
+    prefs = api_client.get(f"/api/v1/research-runs/{run_id}/source-preferences")
+    assert prefs.status_code == 200
+    excluded = [item for item in prefs.json() if item["action"] == "exclude"]
+    assert any(item["identity_value"] == "spam.test" for item in excluded)
+
+
+@pytest.mark.postgres
 def test_resume_cancelled_run_conflict(api_client: TestClient) -> None:
     created = api_client.post("/api/v1/research-runs", json={"goal": "Resume guard"})
     run_id = created.json()["id"]

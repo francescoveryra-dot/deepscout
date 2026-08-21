@@ -105,6 +105,7 @@ def plan_retrieval_query(
     role: AgentRole = AgentRole.EXTRACTOR,
     document_token_estimate: int | None = None,
     counter_evidence: bool = False,
+    fresher_than: datetime | None = None,
 ) -> QueryPlan:
     cleaned = " ".join(query.split())
     entities = _extract_entities(cleaned)
@@ -144,6 +145,7 @@ def plan_retrieval_query(
         task_id=task_id,
         entities=entities,
         source_ids=list(source_ids or []),
+        fresher_than=fresher_than,
         mode=mode,
         corpus=corpus,
         routes=routes,

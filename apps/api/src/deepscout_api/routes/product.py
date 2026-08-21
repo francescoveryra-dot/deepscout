@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from deepscout_core.deployment import CredentialProvider
 from deepscout_core.settings import Settings, get_settings
 from deepscout_core.types import ProviderKind
 from deepscout_providers.defaults import DEFAULT_EMBEDDING_MODELS
@@ -61,7 +62,7 @@ def product_overview(
             if settings.is_hosted()
             else _langsmith_status(settings)
         ),
-        "providers": _provider_status(settings),
+        "providers": _provider_status(settings, access=access, session=store._session),
     }
 
 
@@ -87,7 +88,7 @@ def product_settings(
     )
     return {
         "identity": identity,
-        "providers": _provider_status(settings),
+        "providers": _provider_status(settings, access=access, session=store._session),
         "langsmith": langsmith,
         "research_defaults": {
             "max_iterations": settings.research_max_iterations,
@@ -125,13 +126,20 @@ def product_settings(
     }
 
 
-def _provider_status(settings: Settings) -> dict:
+def _provider_status(settings: Settings, *, access=None, session=None) -> dict:
     if settings.is_hosted():
+        configured = {item.value: False for item in CredentialProvider}
+        if access is not None and session is not None and access.principal is not None:
+            from deepscout_persistence.identity import list_credentials
+
+            for row in list_credentials(session, access.principal.id):
+                if row.status == "configured":
+                    configured[row.provider] = True
         return {
-            "google": {"configured": False, "model": "gemini-3.7-flash", "source": "user_vault"},
-            "openai": {"configured": False, "model": "gpt-4.1-mini", "source": "user_vault"},
-            "anthropic": {"configured": False, "model": "claude-haiku-4-5-20251001", "source": "user_vault"},
-            "tavily": {"configured": False, "source": "user_vault"},
+            "google": {"configured": configured.get("google", False), "model": "gemini-3.7-flash", "source": "user_vault"},
+            "openai": {"configured": configured.get("openai", False), "model": "gpt-4.1-mini", "source": "user_vault"},
+            "anthropic": {"configured": configured.get("anthropic", False), "model": "claude-haiku-4-5-20251001", "source": "user_vault"},
+            "tavily": {"configured": configured.get("tavily", False), "source": "user_vault"},
         }
     return {
         "google": {"configured": settings.google_api_key is not None, "model": "gemini-3.7-flash"},

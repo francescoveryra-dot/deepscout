@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from deepscout_core.domain.budget import ResearchBudget
+from deepscout_core.domain.research_preferences import ResearchPreferences
 from deepscout_core.domain.enums import (
     ContradictionEvidenceStatus,
     PlanDecomposition,
@@ -26,6 +27,7 @@ class ResearchRunCreate(BaseModel):
     budget: ResearchBudget | None = None
     research_mode: Literal["quick", "standard", "deep"] | None = None
     output_language: str = Field(default="en", min_length=2, max_length=16)
+    preferences: ResearchPreferences | None = None
 
 
 class ResearchRunRead(BaseModel):

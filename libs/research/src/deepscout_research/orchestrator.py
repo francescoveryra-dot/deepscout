@@ -563,7 +563,9 @@ class ResearchOrchestrator:
         self._store.update_question_status(question.id, ResearchQuestionStatus.RESEARCHING)
         query = question.text[:500]
         try:
-            results = self._search.search(query, max_results=3)
+            from deepscout_research.preferences.search_context import search_for_run
+
+            results = search_for_run(self._store, run_id, self._search, query, max_results=3)
             self._budget.reserve_tool_call(run_id, note=f"search:{iteration}")
         except Exception:
             self._store.update_question_status(

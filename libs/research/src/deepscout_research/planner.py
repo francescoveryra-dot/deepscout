@@ -76,6 +76,15 @@ def build_research_plan(
             context.retrieved_data.append(
                 "HISTORICAL DATA (not evidence authority): " + str(followup)[:3000]
             )
+        if row is not None:
+            from deepscout_research.preferences.snapshot import preferences_from_snapshot
+
+            resolved = preferences_from_snapshot(row.config_snapshot, goal=goal)
+            context.domain_state["research_preferences"] = {
+                "geographic_focus": resolved.geographic_regions or ["global"],
+                "freshness_policy": resolved.freshness_policy,
+                "output_language": output_language,
+            }
     messages = [
         SystemMessage(content=compose_system_message(planner_spec)),
         HumanMessage(content=context.render_user_content()),
