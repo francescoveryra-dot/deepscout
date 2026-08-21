@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Phase 5 hybrid retrieval: pgvector + PostgreSQL FTS, RRF fusion, deterministic rerank, run-scoped indexing pipeline
+- Document chunks and embedding records derived from immutable `SourceSnapshot` rows with versioning metadata
+- Structured retrieval planner, strategy policy, retrieval grader, and bounded re-retrieval
+- `scripts/deepscout_index.py` backfill command; ADR-008; RAG technique landscape review; RAG threat model T20–T24
+- Retrieval evaluators (Recall@K, MRR, cross-run isolation) and optional RAGAS offline wrapper
+
 ### Security
 
 - Document MODE A (local/trusted network) as the supported deployment; public Internet auth is not implemented
