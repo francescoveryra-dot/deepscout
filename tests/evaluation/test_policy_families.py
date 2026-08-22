@@ -26,7 +26,8 @@ def test_hard_bounds_clamp_gap_bonus() -> None:
 
 def test_policy_key_format() -> None:
     assert policy_key_for(PolicyFamily.RETRIEVAL) == "global.retrieval"
-    assert policy_key_for(PolicyFamily.RETRIEVAL, class_suffix="semantic") == "global.retrieval.semantic"
+    scoped = policy_key_for(PolicyFamily.RETRIEVAL, class_suffix="semantic")
+    assert scoped == "global.retrieval.semantic"
 
 
 def test_resolve_defaults_without_db() -> None:
