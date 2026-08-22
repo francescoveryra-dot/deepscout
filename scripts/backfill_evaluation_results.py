@@ -13,7 +13,7 @@ from deepscout_evaluation.persist import persist_research_evaluations
 from deepscout_persistence.models import EvaluationResultRow, ResearchRunRow
 from deepscout_persistence.session import get_session_factory
 from deepscout_persistence.store import ResearchStore
-from sqlalchemy import exists, func, select
+from sqlalchemy import exists, select
 
 
 def _terminal_runs_missing_evaluations(
