@@ -10,8 +10,6 @@ import json
 import sys
 from uuid import uuid4
 
-from sqlalchemy import select
-
 from deepscout_core.settings import get_settings
 from deepscout_evaluation.learning.candidates import generate_improvement_candidate
 from deepscout_evaluation.learning.diagnosis import diagnose_learning_case
@@ -33,6 +31,7 @@ from deepscout_evaluation.regression_origins import RegressionOrigin
 from deepscout_persistence.models import PrincipalRow
 from deepscout_persistence.session import get_session_factory
 from deepscout_persistence.store import ResearchStore
+from sqlalchemy import select
 
 SMOKE_PREFIX = "controlled-production-smoke"
 POLICY_KEY = "global.corrective_research"
