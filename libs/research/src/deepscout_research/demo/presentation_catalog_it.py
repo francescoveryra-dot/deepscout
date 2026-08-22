@@ -1,5 +1,7 @@
 """Curated Italian catalog metadata for public demos."""
 
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 CATALOG_IT: dict[str, dict[str, str]] = {

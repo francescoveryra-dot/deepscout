@@ -1,8 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 const BASE = process.env.PRODUCTION_URL ?? "https://deep-scout-plum.vercel.app";
+const runProductionUxE2E = Boolean(process.env.PRODUCTION_E2E);
 
 test.describe("production demo shell", () => {
+  test.describe.configure({ skip: process.env.CI && !runProductionUxE2E });
   test("demo navigation tabs are active for published run", async ({ page }) => {
     const catalog = await page.request.get(`${BASE}/api/v1/demos`);
     const demos = (await catalog.json()).items;
