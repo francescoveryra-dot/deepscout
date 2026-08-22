@@ -1,10 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 const BASE = process.env.PRODUCTION_URL ?? "https://deep-scout-plum.vercel.app";
-const runProductionUxE2E = Boolean(process.env.PRODUCTION_E2E);
+const describeProductionUx = process.env.CI && !process.env.PRODUCTION_E2E ? test.describe.skip : test.describe;
 
-test.describe("public demo UX", () => {
-  test.describe.configure({ skip: process.env.CI && !runProductionUxE2E });
+describeProductionUx("public demo UX", () => {
   test("demo shell has single tab row and no raw events", async ({ page }) => {
     const catalog = await page.request.get(`${BASE}/api/v1/demos`);
     const demos = (await catalog.json()).items;
