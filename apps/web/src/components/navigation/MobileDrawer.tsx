@@ -72,7 +72,9 @@ export function MobileDrawer({
             <IconClose />
           </button>
         </div>
-        <div className="mobile-drawer-body">{children}</div>
+        <div className="mobile-drawer-body" role="navigation" aria-label={t("nav.primary")}>
+          {children}
+        </div>
       </aside>
     </div>
   );

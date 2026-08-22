@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import type { AppNavItem } from "./useAppNavigation";
-import { useT } from "@/i18n/context";
 
 export function AppNavPanel({
   items,
@@ -11,10 +10,8 @@ export function AppNavPanel({
   items: AppNavItem[];
   onNavigate?: () => void;
 }) {
-  const t = useT();
-
   return (
-    <nav className="nav" aria-label={t("nav.primary")}>
+    <nav className="nav">
       {items.map((item) => {
         if (item.section === "label") {
           return (
