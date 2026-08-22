@@ -9,7 +9,8 @@ test.describe("production demo shell", () => {
     const runId = demos[0].id as string;
     await page.goto(`${BASE}/research/${runId}/plan`);
     await expect(page.getByTestId("demo-shell")).toBeVisible({ timeout: 20_000 });
-    const plan = page.getByRole("link", { name: /plan/i });
+    await expect(page.getByTestId("demo-run-tabs")).toBeVisible({ timeout: 20_000 });
+    const plan = page.getByTestId("demo-run-tabs").getByRole("link", { name: /plan/i });
     await expect(plan).toBeVisible();
     await expect(plan).not.toHaveClass(/disabled|muted/);
     await page.getByRole("link", { name: /report/i }).click();
