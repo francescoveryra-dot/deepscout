@@ -104,9 +104,11 @@ def build_presentation_payload(
     for task in workspace.get("tasks") or []:
         key = task.get("task_key") or task.get("id")
         overlay = pres_tasks.get(key) or pres_tasks.get(task.get("id", "")) or {}
+        objective = overlay.get("objective") or task.get("objective", "")
+        display_name = overlay.get("display_name") or task.get("display_name", "")
         tasks[key] = {
-            "objective": _clean_presentation_text(overlay.get("objective") or task.get("objective", "")),
-            "display_name": _clean_presentation_text(overlay.get("display_name") or task.get("display_name", "")),
+            "objective": _clean_presentation_text(objective),
+            "display_name": _clean_presentation_text(display_name),
             "rationale": _clean_presentation_text(overlay.get("rationale", "")),
         }
 
@@ -115,25 +117,32 @@ def build_presentation_payload(
     for worker in workspace.get("workers") or []:
         wid = worker.get("worker_id", "")
         overlay = pres_workers.get(wid) or {}
+        worker_name = overlay.get("display_name") or worker.get("display_name", "")
+        assigned_task = overlay.get("assigned_task") or worker.get("assigned_task", "")
         workers[wid] = {
-            "display_name": _clean_presentation_text(overlay.get("display_name") or worker.get("display_name", "")),
-            "assigned_task": _clean_presentation_text(overlay.get("assigned_task") or worker.get("assigned_task", "")),
+            "display_name": _clean_presentation_text(worker_name),
+            "assigned_task": _clean_presentation_text(assigned_task),
         }
 
     claims: dict[str, dict[str, str]] = {}
     pres_claims = presentation.get("claims") or {}
     for claim in workspace.get("claims") or []:
         cid = claim.get("id", "")
-        statement = pres_claims.get(cid) or pres_claims.get(claim.get("statement", "")) or claim.get("statement", "")
+        statement = (
+            pres_claims.get(cid)
+            or pres_claims.get(claim.get("statement", ""))
+            or claim.get("statement", "")
+        )
         claims[cid] = {"statement": statement}
 
     report = None
     pres_report = presentation.get("report") or {}
     authoritative = workspace.get("report")
     if pres_report.get("body_markdown") or pres_report.get("title"):
+        auth = authoritative or {}
         report = {
-            "title": pres_report.get("title") or (authoritative or {}).get("title", "Research Report"),
-            "body_markdown": pres_report.get("body_markdown") or (authoritative or {}).get("body_markdown", ""),
+            "title": pres_report.get("title") or auth.get("title", "Research Report"),
+            "body_markdown": pres_report.get("body_markdown") or auth.get("body_markdown", ""),
             "is_localized": bool(pres_report.get("body_markdown")),
         }
     elif authoritative:
@@ -143,10 +152,11 @@ def build_presentation_payload(
             "is_localized": False,
         }
 
+    title_source = presentation.get("title") or presentation.get("goal", "")[:120]
     return {
         "locale": normalize_locale(locale),
         "goal": _clean_presentation_text(presentation.get("goal") or workspace.get("goal", "")),
-        "title": _clean_presentation_text(presentation.get("title") or presentation.get("goal", "")[:120]),
+        "title": _clean_presentation_text(title_source),
         "summary": _clean_presentation_text(presentation.get("summary", "")),
         "why_interesting": _clean_presentation_text(presentation.get("why_interesting", "")),
         "quality_intro": _clean_presentation_text(presentation.get("quality_intro", "")),

@@ -1,24 +1,23 @@
-"""Operator-only: generate and attach IT/EN demo presentation bundles.
+"""Operator-only: generate and attach IT/EN demo presentation bundles."""
 
-Uses operator provider credentials once at publication time. Anonymous browsing
-reads stored presentation only (zero provider spend).
-"""
+# ruff: noqa: E501
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 from pathlib import Path
 
 from deepscout_core.settings import get_settings
+from deepscout_persistence.models import ResearchRunRow
 from deepscout_persistence.session import get_session_factory
 from deepscout_persistence.store import ResearchStore
-from deepscout_research.demo.presentation import load_bundled_presentation, merge_presentation_into_public_demo
+from deepscout_research.demo.presentation import (
+    load_bundled_presentation,
+    merge_presentation_into_public_demo,
+)
 from deepscout_research.demo.presentation_catalog_it import CATALOG_IT
 from sqlalchemy import select
-
-from deepscout_persistence.models import ResearchRunRow
 
 _DATA_DIR = Path(__file__).resolve().parents[1] / "libs/research/src/deepscout_research/demo/presentation_data"
 
@@ -99,8 +98,8 @@ def _extract_model_text(content: object) -> str:
 
 
 def _translate_text_with_gemini(text: str, api_key: str, *, context: str) -> str:
-    from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_core.messages import HumanMessage, SystemMessage
+    from langchain_google_genai import ChatGoogleGenerativeAI
 
     model = ChatGoogleGenerativeAI(model="gemini-3.7-flash", google_api_key=api_key, temperature=0.2)
     response = model.invoke(
