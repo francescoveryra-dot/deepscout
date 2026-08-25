@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import secrets
+
 from authlib.integrations.httpx_client import OAuth2Client
 from deepscout_core.settings import Settings, get_settings
 from deepscout_persistence.identity import (
@@ -24,6 +26,7 @@ from deepscout_api.access import SESSION_COOKIE, load_access, require_user, safe
 from deepscout_api.deps import get_research_store
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+OAUTH_BINDING_COOKIE_PREFIX = "ds_oauth_state_"
 
 GITHUB = {
     "authorize": "https://github.com/login/oauth/authorize",
@@ -58,6 +61,35 @@ def _set_session_cookie(response: Response, token: str, settings: Settings) -> N
 
 def _clear_session_cookie(response: Response) -> None:
     response.delete_cookie(SESSION_COOKIE, path="/")
+
+
+def _oauth_binding_cookie(provider: str) -> str:
+    return f"{OAUTH_BINDING_COOKIE_PREFIX}{provider}"
+
+
+def _set_oauth_binding_cookie(
+    response: Response,
+    *,
+    provider: str,
+    state: str,
+    settings: Settings,
+) -> None:
+    response.set_cookie(
+        _oauth_binding_cookie(provider),
+        state,
+        httponly=True,
+        secure=_cookie_secure(settings),
+        samesite="lax",
+        max_age=10 * 60,
+        path=f"/api/v1/auth/callback/{provider}",
+    )
+
+
+def _clear_oauth_binding_cookie(response: Response, provider: str) -> None:
+    response.delete_cookie(
+        _oauth_binding_cookie(provider),
+        path=f"/api/v1/auth/callback/{provider}",
+    )
 
 
 def _client_id_secret(settings: Settings, provider: str) -> tuple[str, str]:
@@ -129,7 +161,9 @@ def login_start(
         code_verifier=verifier,
         nonce=state if provider == "google" else None,
     )
-    return RedirectResponse(url, status_code=302)
+    response = RedirectResponse(url, status_code=302)
+    _set_oauth_binding_cookie(response, provider=provider, state=state, settings=settings)
+    return response
 
 
 @router.get("/callback/{provider}")
@@ -143,6 +177,9 @@ def login_callback(
 ):
     if provider not in {"github", "google"} or not code or not state:
         raise HTTPException(status_code=400, detail="invalid callback")
+    browser_state = request.cookies.get(_oauth_binding_cookie(provider))
+    if browser_state is None or not secrets.compare_digest(browser_state, state):
+        raise HTTPException(status_code=400, detail="invalid oauth state")
     saved = consume_oauth_state(store._session, state, provider)
     if saved is None:
         raise HTTPException(status_code=400, detail="invalid oauth state")
@@ -207,6 +244,7 @@ def login_callback(
     web = settings.cors_origins.split(",")[0].strip() or "http://localhost:3000"
     response = RedirectResponse(f"{web}{saved.next_path}", status_code=302)
     _set_session_cookie(response, token, settings)
+    _clear_oauth_binding_cookie(response, provider)
     return response
 
 

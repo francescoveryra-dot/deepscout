@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 from deepscout_core.deployment import LOCAL_SYSTEM_PRINCIPAL_ID
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from deepscout_persistence.models import (
@@ -181,6 +181,7 @@ def upsert_oauth_principal(
 
 
 def save_oauth_state(session: Session, *, provider: str, next_path: str) -> tuple[str, str]:
+    session.execute(delete(OAuthStateRow).where(OAuthStateRow.expires_at <= datetime.now(UTC)))
     state = secrets.token_urlsafe(24)
     verifier = secrets.token_urlsafe(48)
     session.add(
@@ -198,7 +199,12 @@ def save_oauth_state(session: Session, *, provider: str, next_path: str) -> tupl
 
 
 def consume_oauth_state(session: Session, state: str, provider: str) -> OAuthStateRow | None:
-    row = session.scalar(select(OAuthStateRow).where(OAuthStateRow.state == state))
+    row = session.scalar(
+        select(OAuthStateRow)
+        .where(OAuthStateRow.state == state)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
     if row is None or row.provider != provider or row.expires_at <= datetime.now(UTC):
         return None
     session.delete(row)
