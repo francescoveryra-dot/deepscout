@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import secrets
 
 from authlib.integrations.httpx_client import OAuth2Client
@@ -67,16 +69,20 @@ def _oauth_binding_cookie(provider: str) -> str:
     return f"{OAUTH_BINDING_COOKIE_PREFIX}{provider}"
 
 
+def _oauth_binding_value(state: str, client_secret: str) -> str:
+    return hmac.new(client_secret.encode(), state.encode(), hashlib.sha256).hexdigest()
+
+
 def _set_oauth_binding_cookie(
     response: Response,
     *,
     provider: str,
-    state: str,
+    binding: str,
     settings: Settings,
 ) -> None:
     response.set_cookie(
         _oauth_binding_cookie(provider),
-        state,
+        binding,
         httponly=True,
         secure=_cookie_secure(settings),
         samesite="lax",
@@ -162,7 +168,12 @@ def login_start(
         nonce=state if provider == "google" else None,
     )
     response = RedirectResponse(url, status_code=302)
-    _set_oauth_binding_cookie(response, provider=provider, state=state, settings=settings)
+    _set_oauth_binding_cookie(
+        response,
+        provider=provider,
+        binding=_oauth_binding_value(state, client_secret),
+        settings=settings,
+    )
     return response
 
 
@@ -177,13 +188,14 @@ def login_callback(
 ):
     if provider not in {"github", "google"} or not code or not state:
         raise HTTPException(status_code=400, detail="invalid callback")
-    browser_state = request.cookies.get(_oauth_binding_cookie(provider))
-    if browser_state is None or not secrets.compare_digest(browser_state, state):
+    client_id, client_secret = _client_id_secret(settings, provider)
+    browser_binding = request.cookies.get(_oauth_binding_cookie(provider))
+    expected_binding = _oauth_binding_value(state, client_secret)
+    if browser_binding is None or not secrets.compare_digest(browser_binding, expected_binding):
         raise HTTPException(status_code=400, detail="invalid oauth state")
     saved = consume_oauth_state(store._session, state, provider)
     if saved is None:
         raise HTTPException(status_code=400, detail="invalid oauth state")
-    client_id, client_secret = _client_id_secret(settings, provider)
     spec = GITHUB if provider == "github" else GOOGLE
     redirect_uri = f"{settings.public_base_url.rstrip('/')}/api/v1/auth/callback/{provider}"
     client = OAuth2Client(
