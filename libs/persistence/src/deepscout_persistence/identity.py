@@ -180,9 +180,15 @@ def upsert_oauth_principal(
     return principal
 
 
-def save_oauth_state(session: Session, *, provider: str, next_path: str) -> tuple[str, str]:
+def save_oauth_state(
+    session: Session,
+    *,
+    provider: str,
+    next_path: str,
+    browser_binding: str,
+) -> tuple[str, str]:
     session.execute(delete(OAuthStateRow).where(OAuthStateRow.expires_at <= datetime.now(UTC)))
-    state = secrets.token_urlsafe(24)
+    state = f"{secrets.token_urlsafe(24)}.{browser_binding}"
     verifier = secrets.token_urlsafe(48)
     session.add(
         OAuthStateRow(

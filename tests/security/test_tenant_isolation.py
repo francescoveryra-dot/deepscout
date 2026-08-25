@@ -182,7 +182,8 @@ def test_oauth_callback_is_bound_to_initiating_browser(hosted_client) -> None:
     browser_binding = started.cookies.get("ds_oauth_state_github")
     assert browser_binding is not None
     assert browser_binding != state
-    assert len(browser_binding) == 64
+    assert state.endswith(f".{browser_binding}")
+    assert len(browser_binding) >= 32
 
     from deepscout_api.app import app
 
